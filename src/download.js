@@ -1,10 +1,11 @@
 const net = require('net');
 const tracker = require('./tracker.js');
 const Buffer = require('buffer').Buffer;
+const message = require('./message.js')
 
 module.exports = torrent => {
     tracker.getPeers(torrent, peers => {
-        peers.forEach(download(peer, torrent));
+        peers.forEach(peer => download(peer, torrent));
     });
 };
 
@@ -19,7 +20,7 @@ function download(peer, torrent) {
 
 }
 
-function msgHandler(message, socket){
+function msgHandler(msg, socket){
     if(isHandshake(msg)) socket.write(message.buildInterested());
     
     else {
@@ -34,8 +35,8 @@ function msgHandler(message, socket){
     }
 }
 
-function isHandshake(message){
-    return (message.length === msg.readUInt8BE(0) + 49 && message..toString('utf8',1, 1 + message.readUInt8BE(0)) === 'BitTorrent Protocol');
+function isHandshake(msg){
+    return (msg.length === msg.readUInt8(0) + 49 && msg.toString('utf8',1, 1 + msg.readUInt8(0)) === 'BitTorrent Protocol');
 }
 
 function onWholeMsg(socket, callback) {
@@ -43,12 +44,12 @@ function onWholeMsg(socket, callback) {
     var Handshake = true;
 
     socket.on('data', recvdBuffer => {
-        const msgLen = () => Handshake ? savedBuff.readUInt8BE(0) + 49 : savedBuff.readUInt32BE(0) + 4;
+        const msgLen = () => Handshake ? savedBuff.readUInt8(0) + 49 : savedBuff.readUInt32BE(0) + 4;
         savedBuff = Buffer.concat([savedBuff, recvdBuffer]);
 
         while(savedBuff.length >=4 && savedBuff.length >= msgLen()) {
-            callback(savedBuffer.slice(0,msgLen()));
-            savedBuff = savedBuffer.slice(msgLen());
+            callback(savedBuff.slice(0,msgLen()));
+            savedBuff = savedBuff.slice(msgLen());
             handshake = false;
         }
 
