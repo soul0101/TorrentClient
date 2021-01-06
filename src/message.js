@@ -27,7 +27,7 @@ module.exports.buildChoke = () => {
     buf.writeUInt8BE(0, 4);
 
     return buf;
-}
+};
 
 module.exports.buildUnchoke = () => {
     const buf = Buffer.alloc(5);
@@ -35,7 +35,7 @@ module.exports.buildUnchoke = () => {
     buf.writeUInt8BE(1, 4);
 
     return buf;
-}
+};
 
 module.exports.buildInterested = () => {
     const buf = Buffer.alloc(5);
@@ -43,7 +43,7 @@ module.exports.buildInterested = () => {
     buf.writeUInt8BE(2, 4);
 
     return buf;
-}
+};
 
 module.exports.buildUninterested = () => {
     const buf = Buffer.alloc(5);
@@ -51,7 +51,7 @@ module.exports.buildUninterested = () => {
     buf.writeUInt8BE(3, 4);
 
     return buf;
-}
+};
 
 module.exports.buildHave = (index) => {
     const buf = Buffer.alloc(9);
@@ -60,7 +60,7 @@ module.exports.buildHave = (index) => {
     buf.writeUInt32BE(index, 5);
 
     return buf;
-}
+};
 
 module.exports.buildBitfield = (bitfield) => {
     const buf = Buffer.alloc(5 + bitfield.length);
@@ -71,7 +71,7 @@ module.exports.buildBitfield = (bitfield) => {
     bitfield.copy(buf,5); 
 
     return buf;
-}
+};
 
 module.exports.buildRequest = (payload) => {
     const buf = Buffer.alloc(17);
@@ -82,7 +82,7 @@ module.exports.buildRequest = (payload) => {
     buf.writeUInt32BE(payload.length, 13);
 
     return buf;
-}
+};
 
 module.exports.buildPiece = (payload) => {
     const buf = Buffer.alloc(13 + payload.block.length);
@@ -93,7 +93,7 @@ module.exports.buildPiece = (payload) => {
     payload.block.copy(buf,13);
 
     return buf;
-}
+};
 
 module.exports.buildCancel = (payload) => {
     const buf = Buffer.alloc(17);
@@ -104,7 +104,7 @@ module.exports.buildCancel = (payload) => {
     buf.writeUInt32BE(payload.length, 13);
 
     return buf;
-}
+};
 
 module.exports.buildPort = (listenPort) => {
     const buf = Buffer.alloc(7);
@@ -113,6 +113,26 @@ module.exports.buildPort = (listenPort) => {
     buf.writeUInt16BE(listenPort, 5);
 
     return buf;
-}
+};
 
+module.exports.parse = (message) => {
+    const id = (message.length > 4) ? message.readUInt8BE(4) : null;
+    const payload = (message.length >5) ? message.slice(5) : null;
+
+    if(id === 6 || id === 7 || id === 8){
+        const rest = payload.slice(8);
+        payload = {
+            index : payload.readUInt32BE(0),
+            begin : payload.readUInt32BE(4)
+        };
+
+        payload[id === 7 ? 'block' : 'length'] = rest;
+    }
+
+    return {
+        size : message.readUInt8BE,
+        id : id,
+        payload : payload
+    }
+};
 
