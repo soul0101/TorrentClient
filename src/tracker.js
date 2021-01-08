@@ -9,26 +9,23 @@ const torrentParser = require('./torrent-parser.js')
 
 module.exports.getPeers = (torrent, callback) => {
     const socket = dgram.createSocket('udp4');
-    const url = torrent["announce-list"][2].toString('utf8');
+    const url = torrent["announce-list"][7].toString('utf8');
 
     udpSend(socket, buildConnReq(), url);
 
     socket.on('message', response => {
-        
-        if (respType(response) == 'connect'){
-            console.log("Got a Connection response!");
 
-            const ConnResp = parseConnResp(response);
+        if (respType(response) === 'connect'){
 
-            const announceReq = buildAnnounceReq(ConnResp.connectionId, torrent);
+            const connResp = parseConnResp(response);
+
+            const announceReq = buildAnnounceReq(connResp.connectionId, torrent);
             udpSend(socket, announceReq, url);
         }
 
-        else if (respType(response) == 'announce'){
-            console.log("Got an Announce response!")
+        else if (respType(response) === 'announce'){
 
             const announceResp = parseAnnounceResp(response);
-            console.log(announceResp.peers);
 
             callback(announceResp.peers); //?????????????????????
         }
@@ -104,7 +101,7 @@ function buildAnnounceReq(connId, torrent, port=6881){
 
 function parseAnnounceResp(resp) {
 
-    function group (iterable, groupSize) {
+    function group(iterable, groupSize) {
         let groups = [];
         for(let i = 0; i < iterable.length; i += groupSize){
             groups.push(iterable.slice(i, i + groupSize));

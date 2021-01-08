@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 const Buffer = require('buffer').Buffer;
 const crypto = require('crypto');

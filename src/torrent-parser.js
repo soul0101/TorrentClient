@@ -1,6 +1,6 @@
 'use strict';
-//const bignum = require('bignum');
-const Buffer = require('buffer').Buffer;
+
+
 const BN = require('bn.js');
 const crypto = require('crypto')
 const fs = require('fs');
@@ -16,12 +16,36 @@ module.exports.infoHash = (torrent) => {
 
 };
 
-module.exports.size = (torrent) => {
+module.exports.size = (torrent) => { 
 
     const size = torrent.info.files ?
     torrent.info.files.map(file => file.length).reduce((a, b) => a + b) : torrent.info.length;
-    //console.log(size)
-
-    return new BN(size).toBuffer('be',8);
     
+    return new BN(size).toBuffer('be',8);
+
 };
+
+module.exports.BLOCK_LEN = Math.pow(2, 14); 
+
+module.exports.pieceLen = (torrent, pieceIndex) => {  
+    const totalLength = new BN(this.size(torrent)).toNumber();
+    const pieceLength = torrent.info['piece length'];
+
+    const lastPieceLength = totalLength % pieceLength;
+    const lastPieceIndex = Math.floor(totalLength / pieceLength);
+
+    return (pieceIndex === lastPieceIndex) ? lastPieceLength : pieceLength;
+};
+
+module.exports.blocksPerPiece = (torrent, pieceIndex) => { 
+    return Math.ceil(this.pieceLen(torrent, pieceIndex) / this.BLOCK_LEN);
+};
+
+module.exports.blockLen = (torrent, pieceIndex, blockIndex) => { 
+    const pieceLength = this.pieceLen(torrent, pieceIndex);
+  
+    const lastBlockLength = pieceLength % this.BLOCK_LEN;
+    const lastBlockIndex = Math.floor(pieceLength / this.BLOCK_LEN);
+
+    return blockIndex === lastBlockIndex ? lastBlockLength : this.BLOCK_LEN;
+  };
