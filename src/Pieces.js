@@ -11,6 +11,7 @@ module.exports = class {
 
         this._requested = buildPiecesArray();
         this._received = buildPiecesArray();
+        this.completedBlocks = 0;
    }
 
    addRequested(pieceBlock){
@@ -19,6 +20,7 @@ module.exports = class {
    }
 
    addReceived(pieceBlock){
+    this.completedBlocks++;
     const blockIndex = pieceBlock.begin / tp.BLOCK_LEN;   
     this._received[pieceBlock.index][blockIndex] = true;
    }
@@ -35,4 +37,14 @@ module.exports = class {
    isDone(){
        return this._received.every(block => block.every(i => i === true));
    }
+
+   /*
+   progress(torrent){
+       const total = tp.totalBlocks(torrent);
+       const percentage = Math.round(((this._completedBlocks * 100 / total) + Number.EPSILON) * 100) / 100
+       process.stdout.write('progress: ' + percentage + '%\r');
+
+   }
+   */
+   
 };

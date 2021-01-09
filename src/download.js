@@ -7,10 +7,32 @@ const message = require('./message.js');
 const Pieces = require('./Pieces.js');
 const Queue = require('./Queue.js');
 const fs = require('fs');
+const tp = require('./torrent-parser.js');
+const cliProgress = require('cli-progress');
+const speed = {
+    timer : 0,
+    count : 0
+};
 
-module.exports = (torrent, path) => {     
+
+const b1 = new cliProgress.SingleBar({
+    format: 'CLI Progress |' + '{bar}' + '| {percentage}% || {value}/{total} Chunks || Speed: {speed} || ETA: {eta_formatted}',
+    barCompleteChar: '\u2588',
+    barIncompleteChar: '\u2591',
+    hideCursor: true
+});
+
+
+
+
+module.exports = (torrent, path) => {   
+
+    b1.start(tp.totalBlocks(torrent), 0, {
+        speed: "N/A"
+    });
+
     tracker.getPeers(torrent, peers => {
-        const pieces = new Pieces(torrent);
+        const pieces = new Pieces(torrent);        
         const file = fs.openSync(path, "w");
         peers.forEach(peer => download(peer, torrent, pieces, file));
     });
@@ -33,9 +55,9 @@ function msgHandler(msg, socket, pieces, queue, torrent, file){
     if(isHandshake(msg)) socket.write(message.buildInterested());
     
     else {
-        console.log(msg.toString('utf8'));
+        //console.log(msg.toString('utf8'));
         const m = message.parse(msg);
-        console.log(m.id);
+        //console.log(m.id);
 
         if (m.id === 0) chokeHandler(socket);
         if (m.id === 1) unchokeHandler(socket, pieces, queue);
@@ -100,7 +122,9 @@ function unchokeHandler(socket, pieces, queue) {
 }
 
 function requestPiece(socket, pieces, queue){
+
     if(queue.choked) return null;
+
     while(queue.length()){
         const pieceBlock = queue.dequeue();
         if(pieces.needed(pieceBlock)){
@@ -109,13 +133,12 @@ function requestPiece(socket, pieces, queue){
             break;
         }
     }
-
 }
 
-function pieceHandler(socket, payload, pieces, queue, torrent, file){
+function pieceHandler(socket, payload, pieces, queue, torrent, file){     
+   
     pieces.addReceived(payload); //wouldnt this be a relatively large object to pass??
-
-
+    b1.increment({speed : getSpeed(pieces)});
     const offset = payload.index*torrent.info['piece length'] + payload.begin;
     fs.write(file, payload.block, 0, payload.block.length, offset, () => {});
 
@@ -123,9 +146,31 @@ function pieceHandler(socket, payload, pieces, queue, torrent, file){
     if(pieces.isDone()){
         socket.end();
         console.log("DONE!");
+        b1.stop();
     }
     else{
         requestPiece(socket, pieces, queue);
     }
 
 }
+
+function getSpeed(pieces){
+    const lastTime = speed.timer;
+    const lastCount = speed.count;
+    const newTime = (new Date()).getTime();
+    const newCount = pieces.completedBlocks;
+    speed.count = newCount;
+    speed.timer = newTime;
+    const dSpeed = Math.floor((1000*(newCount - lastCount)) / (newTime - lastTime));
+    return dSpeed;       
+}
+
+
+
+/*
+
+function progress(completed, total) {
+    const percentage = Math.round(((completed * 100 / total) + Number.EPSILON) * 100) / 100
+    process.stdout.write('progress: ' + percentage + '%\r');
+}
+*/
