@@ -28,7 +28,7 @@ module.exports = class {
        if(this._requested.every(block => block.every(i => i))){
            this._requested = this._received.map(block => block.slice());
        }
-       console.log(pieceBlock);
+
        return !this._requested[pieceBlock.index][pieceBlock.begin / tp.BLOCK_LEN];
    }
 

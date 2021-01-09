@@ -46,8 +46,7 @@ function msgHandler(msg, socket, pieces, queue, torrent, file){
 }
 
 function isHandshake(msg){
-    console.log("handshake: ", (msg.length === msg.readUInt8(0) + 49 && msg.toString('utf8',1, 1 + msg.readUInt8(0)) === 'BitTorrent Protocol'));
-    return (msg.length === msg.readUInt8(0) + 49 && msg.toString('utf8',1, 1 + msg.readUInt8(0)) === 'BitTorrent Protocol');
+    return (msg.length === msg.readUInt8(0) + 49 && msg.toString('utf8',1, 1 + msg.readUInt8(0)) === 'BitTorrent protocol');
 }
 
 function onWholeMsg(socket, callback) {
@@ -55,7 +54,6 @@ function onWholeMsg(socket, callback) {
     let Handshake = true;
 
     socket.on('data', recvdBuffer => {
-        console.log(Handshake);
         const msgLen = () => Handshake ? savedBuff.readUInt8(0) + 49 : savedBuff.readInt32BE(0) + 4; //changes Uint to int
         savedBuff = Buffer.concat([savedBuff, recvdBuffer]);
 
