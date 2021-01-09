@@ -49,3 +49,8 @@ module.exports.blockLen = (torrent, pieceIndex, blockIndex) => {
 
     return blockIndex === lastBlockIndex ? lastBlockLength : this.BLOCK_LEN;
   };
+
+module.exports.totalBlocks = (torrent) => {
+    const totalLength = new BN(this.size(torrent)).toNumber();
+    return Math.ceil(totalLength / this.BLOCK_LEN);
+}
