@@ -9,11 +9,13 @@ const Queue = require('./Queue.js');
 const fs = require('fs');
 const tp = require('./torrent-parser.js');
 const cliProgress = require('cli-progress');
+const fileHandler = require('./fileHandler');
 const speed = {
     timer : 0,
     count : 0
 };
 
+let isMultifile = true;
 
 const b1 = new cliProgress.SingleBar({
     format: 'CLI Progress |' + '{bar}' + '| {percentage}% || {value}/{total} Chunks || Speed: {speed} || ETA: {eta_formatted}',
@@ -22,9 +24,6 @@ const b1 = new cliProgress.SingleBar({
     hideCursor: true
 });
 
-
-
-
 module.exports = (torrent, path) => {   
 
     b1.start(tp.totalBlocks(torrent), 0, {
@@ -32,26 +31,27 @@ module.exports = (torrent, path) => {
     });
 
     tracker.getPeers(torrent, peers => {
-        const pieces = new Pieces(torrent);        
-        const file = fs.openSync(path, "w");
-        peers.forEach(peer => download(peer, torrent, pieces, file));
+        const pieces = new Pieces(torrent);  
+        const fileDetails = fileHandler.initializeFiles(torrent);
+        const files = fileDetails.files;
+        isMultifile = fileDetails.isMultifile;
+        peers.forEach(peer => download(peer, torrent, pieces, files));
     });
 };
 
-function download(peer, torrent, pieces, file) {
+function download(peer, torrent, pieces, files) {
     const socket = new net.Socket();
-    
-    socket.on('error', console.log);
+    socket.on('error', ()=>{});
     socket.connect(peer.port, peer.ip, () => {
         socket.write(message.buildHandshake(torrent));
     });
     
     const queue = new Queue(torrent);
-    onWholeMsg(socket, msg => msgHandler(msg, socket, pieces, queue, torrent, file));      
+    onWholeMsg(socket, msg => msgHandler(msg, socket, pieces, queue, torrent, files));      
 
 }
 
-function msgHandler(msg, socket, pieces, queue, torrent, file){
+function msgHandler(msg, socket, pieces, queue, torrent, files){
     if(isHandshake(msg)) socket.write(message.buildInterested());
     
     else {
@@ -63,7 +63,7 @@ function msgHandler(msg, socket, pieces, queue, torrent, file){
         if (m.id === 1) unchokeHandler(socket, pieces, queue);
         if (m.id === 4) haveHandler(socket, m.payload, pieces, queue);
         if (m.id === 5) bitfieldHandler(socket, m.payload, pieces, queue);
-        if (m.id === 7) pieceHandler(socket, m.payload, pieces, queue, torrent, file);
+        if (m.id === 7) pieceHandler(socket, m.payload, pieces, queue, torrent, files);
     }
 }
 
@@ -135,18 +135,38 @@ function requestPiece(socket, pieces, queue){
     }
 }
 
-function pieceHandler(socket, payload, pieces, queue, torrent, file){     
+function pieceHandler(socket, payload, pieces, queue, torrent, files){     
    
+    //console.log(payload);
     pieces.addReceived(payload); //wouldnt this be a relatively large object to pass??
-    b1.increment({speed : getSpeed(pieces)});
-    const offset = payload.index*torrent.info['piece length'] + payload.begin;
-    fs.write(file, payload.block, 0, payload.block.length, offset, () => {});
 
+    b1.increment({speed : getSpeed(pieces)});   
 
+    let offset = payload.index*torrent.info['piece length'] + payload.begin;   
+
+    if(isMultifile) {     
+
+        let blockEnd = offset + payload.block.length;
+        let fileDetails = fileHandler.chooseFile(files, offset, blockEnd);
+        let start = 0;
+        fs.write(fileDetails.index, payload.block.slice(start, start + fileDetails.length), 0, fileDetails.length, fileDetails.start, () => {});
+       // console.log(fileDetails);  
+
+        while(fileDetails.carryforward){
+            start += fileDetails.length;
+            offset += fileDetails.length;
+            fileDetails = fileHandler.chooseFile(files, offset, blockEnd);        
+            fs.write(fileDetails.index, payload.block.slice(start, start + fileDetails.length), 0, fileDetails.length, fileDetails.start, () => {});
+
+        }  
+    }
+    else fs.write(files, payload.block, 0, payload.block.length, offset, () => {});
+    
     if(pieces.isDone()){
         socket.end();
         console.log("DONE!");
         b1.stop();
+        fileHandler.closeFiles(files);
     }
     else{
         requestPiece(socket, pieces, queue);
