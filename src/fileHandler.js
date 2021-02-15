@@ -13,8 +13,9 @@ module.exports.initializeFiles = (torrent) => {
     } 
     
   }); 
+  
 
-  if(torrent.info.files){
+  if(torrent.info.files.length-1){
       const files = [];
       var start = 0;
       
@@ -35,7 +36,7 @@ module.exports.initializeFiles = (torrent) => {
     }; 
   }
   return {
-    files : fs.openSync('./' + (torrent.info.name.toString('utf8')) + '/' + (torrent.info.name.toString('utf8')) , 'w'), 
+    files : fs.openSync('./' + (torrent.info.name.toString('utf8')) + '/' + (torrent.info.files[0].path.toString('utf8')) , 'w'), 
     multifile : false
   };
     

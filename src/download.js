@@ -34,7 +34,7 @@ module.exports = (torrent, path) => {
         const pieces = new Pieces(torrent);  
         const fileDetails = fileHandler.initializeFiles(torrent);
         const files = fileDetails.files;
-        isMultifile = fileDetails.isMultifile;
+        isMultifile = fileDetails.multifile;
         peers.forEach(peer => download(peer, torrent, pieces, files));
     });
 };
@@ -137,12 +137,12 @@ function requestPiece(socket, pieces, queue){
 
 function pieceHandler(socket, payload, pieces, queue, torrent, files){     
    
-    //console.log(payload);
     pieces.addReceived(payload); //wouldnt this be a relatively large object to pass??
 
     b1.increment({speed : getSpeed(pieces)});   
 
-    let offset = payload.index*torrent.info['piece length'] + payload.begin;   
+    let offset = payload.index*torrent.info['piece length'] + payload.begin;  
+    //console.log(files) 
 
     if(isMultifile) {     
 
@@ -160,7 +160,9 @@ function pieceHandler(socket, payload, pieces, queue, torrent, files){
 
         }  
     }
+    
     else fs.write(files, payload.block, 0, payload.block.length, offset, () => {});
+    
     
     if(pieces.isDone()){
         socket.end();
