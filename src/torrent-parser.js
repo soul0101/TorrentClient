@@ -6,6 +6,10 @@ const crypto = require('crypto')
 const fs = require('fs');
 const bencode = require('bencode');
 
+module.exports.numFiles = (torrent) => {
+    return torrent.info.files ? torrent.info.files.length : 1;
+};
+
 module.exports.open = (filepath) => {
     return bencode.decode(fs.readFileSync(filepath));
 };
